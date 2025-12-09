@@ -1,0 +1,24 @@
+.main-button {
+  font-size: 1.8em;
+  padding: 25px 50px;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
+  color: white;
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.main-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.main-button:active {
+  transform: translateY(1px);
+}
+
+.start-button {
+  background: linear-gradient(to right, #27ae60, #2ecc71);
+}

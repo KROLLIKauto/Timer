@@ -1,38 +1,84 @@
-.App {
-  text-align: center;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
+.app-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  padding: 20px;
+}
+
+/* Общие стили для кнопок */
+.main-button {
+  font-size: 1.1em;
+  padding: 12px 25px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: bold;
   color: white;
 }
 
-.App-link {
-  color: #61dafb;
+.main-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
+.main-button:active {
+  transform: translateY(1px);
+}
+
+.secondary-button {
+  font-size: 0.9em;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: bold;
+  color: white;
+}
+
+/* Стили для заголовков */
+h1 {
+  color: #2c3e50;
+  margin-bottom: 25px;
+  font-size: 2.2em;
+  text-align: center;
+}
+
+h2 {
+  color: #2c3e50;
+  margin-bottom: 20px;
+  font-size: 1.8em;
+}
+
+h3 {
+  color: #34495e;
+  margin-bottom: 15px;
+  font-size: 1.4em;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .app-container {
+    padding: 10px;
   }
-  to {
-    transform: rotate(360deg);
+  
+  h1 {
+    font-size: 1.8em;
+  }
+  
+  h2 {
+    font-size: 1.5em;
+  }
+  
+  .main-button {
+    font-size: 1em;
+    padding: 10px 20px;
   }
 }
