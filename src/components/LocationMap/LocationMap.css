@@ -1,0 +1,134 @@
+.location-map-container {
+  width: 100%;
+  margin: 20px 0;
+  background: white;
+  border-radius: 15px;
+  overflow: hidden;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+}
+
+.map-controls {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e9ecef;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.map-control-btn {
+  background: white;
+  border: 2px solid #3498db;
+  color: #3498db;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.map-control-btn:hover {
+  background: #3498db;
+  color: white;
+  transform: scale(1.1);
+}
+
+.map-control-btn.tracking-active {
+  background: #e74c3c;
+  border-color: #e74c3c;
+  color: white;
+}
+
+.map-control-btn.tracking-active:hover {
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+.location-info {
+  display: flex;
+  flex-direction: column;
+  margin-left: auto;
+  gap: 5px;
+}
+
+.accuracy {
+  font-size: 0.9em;
+  color: #7f8c8d;
+  background: #f1f2f6;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.coordinates {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.85em;
+  color: #34495e;
+  background: #f1f2f6;
+  padding: 4px 10px;
+  border-radius: 12px;
+}
+
+.location-error {
+  background: #ffeaa7;
+  color: #d63031;
+  padding: 10px 15px;
+  border-left: 4px solid #e17055;
+  font-size: 0.9em;
+}
+
+.map-wrapper {
+  height: 300px;
+  position: relative;
+}
+
+/* Стили для Leaflet */
+.leaflet-container {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.leaflet-popup-content {
+  font-size: 0.9em;
+  min-width: 200px;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 10px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .location-info {
+    width: 100%;
+    margin-top: 10px;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  
+  .accuracy,
+  .coordinates {
+    font-size: 0.8em;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .map-control-btn {
+    width: 35px;
+    height: 35px;
+    align-self: flex-start;
+  }
+  
+  .location-info {
+    flex-direction: column;
+    gap: 8px;
+  }
+}

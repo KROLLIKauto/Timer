@@ -4,11 +4,13 @@ import Timer from '../Timer/Timer';
 import StartButton from '../StartButton/StartButton';
 import SplitButton from '../SplitButton/SplitButton';
 import TripTable from '../TripTable/TripTable';
+import YandexMap from '../YandexMap/YandexMap';
 import './TripRoom.css';
 
 const TripRoom = ({ rooms, onUpdateRoomStats }) => {
   const { roomId } = useParams();
   const navigate = useNavigate();
+  
   
   const [room, setRoom] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
@@ -18,6 +20,21 @@ const TripRoom = ({ rooms, onUpdateRoomStats }) => {
   const [splitLocation, setSplitLocation] = useState('');
   const [currentSplitTime, setCurrentSplitTime] = useState(0);
   const [trips, setTrips] = useState([]);
+
+  const [currentLocation, setCurrentLocation] = useState(null);
+  const [locationMarkers, setLocationMarkers] = useState([]);
+  const [isLocationEnabled, setIsLocationEnabled] = useState(false);
+
+    // НОВЫЕ состояния для авто-режима
+  const [autoModeActive, setAutoModeActive] = useState(false);
+  const [autoCheckpoints, setAutoCheckpoints] = useState([]);
+  const [autoTotalDistance, setAutoTotalDistance] = useState(0);
+  const [locationHistory, setLocationHistory] = useState([]);
+  
+  // Для авто-отсечек
+  const autoCheckpointRef = useRef([]);
+  const autoModeStartTimeRef = useRef(null);
+  const lastAutoCheckpointRef = useRef(null);
   
   const startTimeRef = useRef(0);
   const timerIntervalRef = useRef(null);
@@ -39,12 +56,186 @@ const TripRoom = ({ rooms, onUpdateRoomStats }) => {
     }
   }, [roomId, rooms, navigate]);
 
-  // Обновляем статистику комнаты при изменении поездок
+ // Обновляем статистику комнаты при изменении поездок
   useEffect(() => {
+    // Используем ref для предотвращения слишком частых обновлений
     if (room && trips.length > 0) {
-      onUpdateRoomStats(roomId);
+      // Обновляем только если действительно изменилось количество поездок
+      const currentTripCount = trips.length;
+      const prevTripCount = JSON.parse(localStorage.getItem(`tripCount_${roomId}`)) || 0;
+      
+      if (currentTripCount !== prevTripCount) {
+        onUpdateRoomStats(roomId);
+        localStorage.setItem(`tripCount_${roomId}`, currentTripCount.toString());
+      }
     }
-  }, [trips, roomId, room, onUpdateRoomStats]);
+  }, [trips.length, roomId, room, onUpdateRoomStats]); // ← Используем только length
+
+  // Функция для старта авто-режима
+  const startAutoMode = () => {
+    if (isRunning) {
+      alert('Сначала остановите текущий таймер');
+      return;
+    }
+    
+    // Начинаем обычный таймер
+    startTimer();
+    
+    // Активируем авто-режим
+    setAutoModeActive(true);
+    setAutoCheckpoints([]);
+    setAutoTotalDistance(0);
+    autoCheckpointRef.current = [];
+    autoModeStartTimeRef.current = new Date();
+    lastAutoCheckpointRef.current = null;
+    
+    // Начинаем трекинг на карте
+    // (режим будет активирован через пропс в LocationMap)
+  };
+
+  // Функция для остановки авто-режима
+  const stopAutoMode = () => {
+    if (!autoModeActive) return;
+    
+    // Останавливаем таймер
+    stopTimer();
+    
+    // Сохраняем поездку в таблицу
+    if (autoCheckpoints.length > 0) {
+      const autoTrip = {
+        id: `autotrip_${Date.now()}`,
+        date: autoModeStartTimeRef.current.toLocaleString('ru-RU'),
+        dateObj: autoModeStartTimeRef.current,
+        totalTime: elapsedTime,
+        formattedTotalTime: formatTime(elapsedTime),
+        totalDistance: autoTotalDistance,
+        isAutoTrip: true,
+        splits: autoCheckpoints.map((checkpoint, index) => ({
+          id: Date.now() + index,
+          time: checkpoint.time,
+          formattedTime: formatTime(checkpoint.time),
+          location: `${checkpoint.kilometers.toFixed(2)} км`,
+          distance: `${checkpoint.kilometers.toFixed(2)} км`,
+          auto: true,
+          coordinates: {
+            latitude: checkpoint.latitude,
+            longitude: checkpoint.longitude
+          }
+        }))
+      };
+
+      // Сохраняем в таблицу
+      const updatedTrips = [...trips, autoTrip]
+        .sort((a, b) => a.totalTime - b.totalTime);
+      
+      setTrips(updatedTrips);
+      localStorage.setItem(`trips_${roomId}`, JSON.stringify(updatedTrips));
+      
+      // Показываем уведомление
+      alert(`Авто-поездка сохранена! 
+        Пройдено: ${(autoTotalDistance / 1000).toFixed(2)} км
+        Время: ${formatTime(elapsedTime)}
+        Отсечек: ${autoCheckpoints.length}`);
+    }
+    
+    // Деактивируем режим
+    setAutoModeActive(false);
+  };
+
+  // Функция-обработчик для авто-отсечек с карты
+  const handleDistanceCheckpoint = (checkpointData) => {
+    if (!autoModeActive || !isRunning) return;
+    
+    const checkpointTime = Date.now() - startTimeRef.current;
+    
+    const newCheckpoint = {
+      id: Date.now(),
+      time: checkpointTime,
+      formattedTime: formatTime(checkpointTime),
+      latitude: checkpointData.latitude,
+      longitude: checkpointData.longitude,
+      kilometers: checkpointData.kilometers,
+      totalDistance: checkpointData.totalDistance,
+      checkpointNumber: checkpointData.checkpointNumber
+    };
+    
+    // Добавляем в состояние
+    setAutoCheckpoints(prev => [...prev, newCheckpoint]);
+    autoCheckpointRef.current = [...autoCheckpointRef.current, newCheckpoint];
+    
+    // Обновляем общую дистанцию
+    setAutoTotalDistance(checkpointData.totalDistance);
+    
+    // Добавляем маркер на карту
+    const newMarker = {
+      lat: checkpointData.latitude,
+      lng: checkpointData.longitude,
+      name: `${checkpointData.kilometers.toFixed(2)} км`,
+      time: formatTime(checkpointTime),
+      distance: `${checkpointData.kilometers.toFixed(2)} км`,
+      auto: true
+    };
+    
+    setLocationMarkers(prev => [...prev, newMarker]);
+    
+    // Показываем уведомление (опционально)
+    console.log(`Авто-отсечка: ${checkpointData.kilometers.toFixed(2)} км`);
+  };
+
+  // Обновляем функцию handleLocationUpdate для сбора истории
+  const handleLocationUpdate = (locationData) => {
+    setCurrentLocation([locationData.latitude, locationData.longitude]);
+    
+    // Сохраняем в историю
+    const locationPoint = {
+      ...locationData,
+      timestamp: new Date().toISOString(),
+      autoMode: autoModeActive
+    };
+    
+    setLocationHistory(prev => {
+      const updated = [...prev, locationPoint];
+      // Сохраняем только последние 1000 точек
+      return updated.slice(-1000);
+    });
+    
+    // Сохраняем в localStorage
+    const storedHistory = JSON.parse(
+      localStorage.getItem(`location_history_${roomId}`) || '[]'
+    );
+    
+    storedHistory.push(locationPoint);
+    if (storedHistory.length > 1000) {
+      storedHistory.splice(0, storedHistory.length - 1000);
+    }
+    
+    localStorage.setItem(
+      `location_history_${roomId}`,
+      JSON.stringify(storedHistory)
+    );
+  };
+
+   // Добавить текущее местоположение как отсечку
+  const addLocationAsSplit = () => {
+    if (!currentLocation || !splitLocation.trim()) return;
+    
+    // Создаем маркер для карты
+    const newMarker = {
+      lat: currentLocation[0],
+      lng: currentLocation[1],
+      name: splitLocation.trim(),
+      time: formatTime(elapsedTime)
+    };
+    
+    setLocationMarkers(prev => [...prev, newMarker]);
+    
+    // Автоматически заполняем поле отсечки если пустое
+    if (!splitLocation) {
+      setSplitLocation(`Точка ${locationMarkers.length + 1} (${currentLocation[0].toFixed(4)}, ${currentLocation[1].toFixed(4)})`);
+    }
+    
+    alert(`Местоположение добавлено как отсечка: ${newMarker.name}`);
+  };
 
   const formatTime = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -93,8 +284,25 @@ const TripRoom = ({ rooms, onUpdateRoomStats }) => {
       id: Date.now(),
       time: currentSplitTime,
       formattedTime: formatTime(currentSplitTime),
-      location: splitLocation.trim()
+      location: splitLocation.trim(),
+      // Добавляем координаты если есть
+      coordinates: currentLocation ? {
+        latitude: currentLocation[0],
+        longitude: currentLocation[1],
+        accuracy: 50 // пример точности
+      } : null
     };
+
+    // Добавляем маркер на карту если есть координаты
+    if (currentLocation) {
+      const newMarker = {
+        lat: currentLocation[0],
+        lng: currentLocation[1],
+        name: splitLocation.trim(),
+        time: formatTime(currentSplitTime)
+      };
+      setLocationMarkers(prev => [...prev, newMarker]);
+    }
 
     setCurrentSplits(prev => [...prev, newSplit]);
     setShowSplitForm(false);
@@ -228,6 +436,50 @@ const TripRoom = ({ rooms, onUpdateRoomStats }) => {
             )}
           </div>
 
+          {/* Статистика авто-режима */}
+          {autoModeActive && (
+            <div className="auto-mode-stats">
+              <h3>🚗 Авто-поездка</h3>
+              <div className="stats-grid">
+                <div className="stat-item">
+                  <span className="stat-label">Отсечек:</span>
+                  <span className="stat-value">{autoCheckpoints.length}</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Дистанция:</span>
+                  <span className="stat-value">{(autoTotalDistance / 1000).toFixed(2)} км</span>
+                </div>
+                <div className="stat-item">
+                  <span className="stat-label">Текущий км:</span>
+                  <span className="stat-value">
+                    {autoCheckpoints.length > 0 
+                      ? `${autoCheckpoints[autoCheckpoints.length - 1].kilometers.toFixed(2)} км`
+                      : '0 км'}
+                  </span>
+                </div>
+              </div>
+              
+              {/* Список авто-отсечек */}
+              {autoCheckpoints.length > 0 && (
+                <div className="auto-checkpoints">
+                  <h4>Авто-отсечки:</h4>
+                  <div className="checkpoints-list">
+                    {autoCheckpoints.slice(-5).reverse().map((checkpoint, index) => (
+                      <div key={checkpoint.id} className="checkpoint-item">
+                        <span className="checkpoint-distance">
+                          {checkpoint.kilometers.toFixed(2)} км
+                        </span>
+                        <span className="checkpoint-time">
+                          {checkpoint.formattedTime}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {showSplitForm && (
             <div className="split-form">
               <h3>📍 Сохранение точки отсечки</h3>
@@ -267,6 +519,32 @@ const TripRoom = ({ rooms, onUpdateRoomStats }) => {
                 ))}
               </ul>
             </div>
+          )}
+        </div>
+
+        {/* Мини-карта */}
+        <div className="map-section">
+            <h3>
+              {autoModeActive ? '🗺️ Авто-трекинг (1 км)' : '📍 Ваше местоположение'}
+            </h3>
+            <YandexMap 
+              onLocationUpdate={handleLocationUpdate}
+              onDistanceCheckpoint={handleDistanceCheckpoint}
+              showTrack={isRunning}
+              markers={locationMarkers}
+              currentLocation={currentLocation}
+              autoMode={autoModeActive}
+              distanceThreshold={1000}
+            />
+          
+          {isRunning && currentLocation && (
+            <button 
+              className="location-split-btn"
+              onClick={addLocationAsSplit}
+              title="Добавить текущее местоположение как отсечку"
+            >
+              📍 Добавить как отсечку
+            </button>
           )}
         </div>
 
