@@ -97,6 +97,11 @@
   flex-wrap: wrap;
 }
 
+.start-button-container {
+  display: flex;
+  gap: 30px;
+}
+
 .stop-button {
   background: linear-gradient(to right, #e74c3c, #c0392b) !important;
 }

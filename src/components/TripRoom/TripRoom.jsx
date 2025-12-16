@@ -5,6 +5,7 @@ import StartButton from '../StartButton/StartButton';
 import SplitButton from '../SplitButton/SplitButton';
 import TripTable from '../TripTable/TripTable';
 import YandexMap from '../YandexMap/YandexMap';
+import { calculateTimeDifference, formatTime } from '../../utils/tripCalculations'
 import './TripRoom.css';
 
 const TripRoom = ({ rooms, onUpdateRoomStats }) => {
@@ -237,14 +238,7 @@ const TripRoom = ({ rooms, onUpdateRoomStats }) => {
     alert(`Местоположение добавлено как отсечка: ${newMarker.name}`);
   };
 
-  const formatTime = (ms) => {
-    const totalSeconds = Math.floor(ms / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
-    const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
+  
 
   const formatTimeShort = (ms) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -355,20 +349,6 @@ const TripRoom = ({ rooms, onUpdateRoomStats }) => {
     }
   };
 
-  const calculateTimeDifference = (currentTrip, previousTrip) => {
-    if (!previousTrip) return null;
-    
-    const differenceMs = currentTrip.totalTime - previousTrip.totalTime;
-    const differencePercent = (differenceMs / previousTrip.totalTime) * 100;
-    
-    return {
-      ms: differenceMs,
-      percent: differencePercent,
-      formatted: formatTime(Math.abs(differenceMs)),
-      isFaster: differenceMs < 0
-    };
-  };
-
   const handleKeyPress = (e) => {
     if (e.key === 'Enter') {
       saveSplit();
@@ -425,12 +405,18 @@ const TripRoom = ({ rooms, onUpdateRoomStats }) => {
           
           <div className="controls-container">
             {!isRunning ? (
-              <StartButton onClick={startTimer} />
+              <div className='start-button-container'>
+                <StartButton onClick={startTimer} > Старт </StartButton>
+                <StartButton onClick={startAutoMode} > Auto Start </StartButton>
+              </div>
             ) : (
               <>
                 <SplitButton onClick={createSplit} />
                 <button className="main-button stop-button" onClick={stopTimer}>
                   СТОП
+                </button>
+                <button className="main-button stop-button" onClick={stopAutoMode}>
+                  Auto Stop
                 </button>
               </>
             )}
